@@ -6,30 +6,14 @@
 #include <string.h> 
 #include <sys/stat.h>
 
-char* chbuf;
-long ccounter = 0;
-
-void bufallocator(char* filename) {
-	struct stat sb;
-	if (stat(filename, &sb) == -1) {
-		perror("stat error");
-		exit(EXIT_FAILURE);
-	}	
-	chbuf = (char*)malloc(sb.st_size);
-	if (chbuf == nullptr) {
-		perror("malloc error");
-		exit(EXIT_FAILURE);
-	}
-	ccounter = sb.st_size; 
-}
+#define BUF_SIZE 1024
 
 int main(int argc, char *argv[]) {
+	char temp_buf[BUF_SIZE];
 	if (argc != 3) {
 		fprintf(stderr, "Использование: %s <имя_файла> <имя_файла>\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
-	(void)argc;
-	bufallocator(argv[1]);	
 	int fd1, fd2;
 	ssize_t str, stw;
 	fd1 = open(argv[1], O_RDONLY);
@@ -43,14 +27,21 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	while ((str = read(fd1, chbuf, ccounter)) > 0) {
-		stw = write(fd2, chbuf, str);
-		if (stw == -1) {
-			fprintf(stderr, "Ошибка записи: %s, CODE: %d", strerror(errno), errno);	
-			exit(EXIT_FAILURE);
+	while ((str = read(fd1, temp_buf, BUF_SIZE)) > 0) {
+		ssize_t total_written = 0;
+		while (total_written < str) {
+			stw = write(fd2, temp_buf + total_written, str - total_written);
+			if (stw == -1) {
+				if (errno == EINTR) {
+					continue;
+				}
+				fprintf(stderr, "Ошибка записи: %s, CODE %d\n", strerror(errno), errno);
+				close(fd1);
+				close(fd2);
+				exit(EXIT_FAILURE);
+			}
+			total_written += stw;
 		}
+		
 	}  		
-	close(fd1);
-	close(fd2);
-	free(chbuf);
 }
