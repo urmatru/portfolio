@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
 				if (fd_2 == -1) {
 					fprintf(stderr, "Ошибка open для файла из конечного каталога\n");
 					exit(EXIT_FAILURE);
-				}/* else if (ERRNO == EISIDR) {
+				}/* else if (errno == EISIDR) {
 					
 				} */
 				def_file_copy(fd1, fd2, temp_buf);
